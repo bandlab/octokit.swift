@@ -40,8 +40,10 @@ extension Octokit {
                              owner: String,
                              repository: String,
                              pullRequestNumber: Int,
+                             page: Int = 1,
+                             perPage: Int = 100,
                              completion: @escaping (_ response: Response<[Review]>) -> Void) -> URLSessionDataTaskProtocol? {
-        let router = ReviewsRouter.listReviews(configuration, owner, repository, pullRequestNumber)
+        let router = ReviewsRouter.listReviews(configuration, owner, repository, pullRequestNumber, page, perPage)
         return router.load(session, dateDecodingStrategy: .formatted(Time.rfc3339DateFormatter), expectedResultType: [Review].self) { pullRequests, error in
             if let error = error {
                 completion(Response.failure(error))
@@ -55,7 +57,7 @@ extension Octokit {
 }
 
 enum ReviewsRouter: JSONPostRouter {
-    case listReviews(Configuration, String, String, Int)
+    case listReviews(Configuration, String, String, Int, Int, Int)
 
     var method: HTTPMethod {
         switch self {
@@ -73,21 +75,21 @@ enum ReviewsRouter: JSONPostRouter {
 
     var configuration: Configuration {
         switch self {
-        case let .listReviews(config, _, _, _):
+        case let .listReviews(config, _, _, _, _, _):
             return config
         }
     }
 
     var params: [String: Any] {
         switch self {
-        case .listReviews:
-            return [:]
+        case .listReviews(_, _, _, _, let page, let perPage):
+            return ["page": String(page), "per_page": String(perPage)]
         }
     }
 
     var path: String {
         switch self {
-        case let .listReviews(_, owner, repository, pullRequestNumber):
+        case let .listReviews(_, owner, repository, pullRequestNumber, _, _):
             return "/repos/\(owner)/\(repository)/pulls/\(pullRequestNumber)/reviews"
         }
     }
